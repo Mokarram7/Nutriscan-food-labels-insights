@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Diet Planner{% endblock %}
+
+{% block styles %}
+<style>
+    /* Form Styles */
+    .diet-form-container {
+        background-color: hsl(var(--card) / 0.8);
+        padding: 2.5rem;
+        border-radius: var(--radius);
+        border: 1px solid hsl(var(--border));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+        max-width: 650px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: hsl(var(--muted-foreground));
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        background-color: hsl(var(--input));
+        border: 1px solid hsl(var(--border));
+        border-radius: calc(var(--radius) - 2px);
+        color: hsl(var(--foreground));
+        font-size: 1rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: hsl(var(--primary));
+        box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+    }
+    
+    .btn-submit {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+        border: none;
+        border-radius: calc(var(--radius) - 2px);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .btn-submit:hover {
+        background-color: hsl(var(--primary) / 0.9);
+    }
+
+    /* Results Styles */
+    #loading-spinner {
+        display: none;
+        border: 5px solid hsl(var(--secondary));
+        border-top: 5px solid hsl(var(--primary));
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 3rem auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #results-container {
+        display: none;
+        margin-top: 2rem;
+        background-color: hsl(var(--card) / 0.8);
+        padding: 2rem;
+        border-radius: var(--radius);
+        border: 1px solid hsl(var(--border));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    #results-container h3 {
+        font-size: 1.75rem;
+        margin-top: 0;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+    #results-container h4 {
+        font-size: 1.25rem;
+        color: hsl(var(--primary));
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    #results-container ul {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    #results-container li {
+        background-color: hsl(var(--secondary));
+        padding: 0.75rem 1rem;
+        border-radius: calc(var(--radius) - 4px);
+        margin-bottom: 0.5rem;
+        border-left: 3px solid hsl(var(--primary));
+    }
+    #results-container p {
+        line-height: 1.7;
+    }
+    
+    /* Updated Media Query for Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .diet-form-container, #results-container {
+            padding: 1.5rem 1rem; /* Adjust padding for smaller screens */
+        }
+
+        h1.text-center {
+            font-size: 1.8rem; /* Further reduce font size */
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr; /* Force a single column layout */
+            gap: 1rem; /* Reduce gap between items */
+        }
+        
+        /* Ensure all form groups take up the full width in a single column */
+        .form-group, .form-group.full-width {
+            grid-column: span 1;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="diet-form-container">
+    <h1 class="text-center" style="margin-bottom: 0.5rem;">AI Personalized Diet Plan</h1>
+    <p class="text-center" style="color: hsl(var(--muted-foreground)); margin-top: 0; margin-bottom: 2rem;">Fill in your details to generate a custom meal plan.</p>
+    
+    <form id="diet-plan-form">
+        {% csrf_token %}
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" placeholder="e.g., 28" required>
+            </div>
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select id="gender" name="gender" required>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="height">Height (cm)</label>
+                <input type="number" id="height" name="height" placeholder="e.g., 175" required>
+            </div>
+            <div class="form-group">
+                <label for="weight">Weight (kg)</label>
+                <input type="number" id="weight" name="weight" placeholder="e.g., 70" required>
+            </div>
+            <div class="form-group full-width">
+                <label for="activity_level">Activity Level</label>
+                <select id="activity_level" name="activity_level" required>
+                    <option value="sedentary">Sedentary (little or no exercise)</option>
+                    <option value="lightly_active">Lightly Active (light exercise/sports 1-3 days/week)</option>
+                    <option value="moderately_active">Moderately Active (moderate exercise/sports 3-5 days/week)</option>
+                    <option value="very_active">Very Active (hard exercise/sports 6-7 days a week)</option>
+                    <option value="extra_active">Extra Active (very hard exercise/sports & physical job)</option>
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label for="goal">Primary Goal</label>
+                <select id="goal" name="goal" required>
+                    <option value="weight_loss">Weight Loss</option>
+                    <option value="weight_gain">Weight Gain (Muscle Building)</option>
+                    <option value="maintenance">Health Maintenance</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn-submit">Generate My Plan</button>
+    </form>
+</div>
+
+<div id="loading-spinner"></div>
+<div id="results-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#diet-plan-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const $form = $(this);
+        const $resultsContainer = $('#results-container');
+        const $loadingSpinner = $('#loading-spinner');
+
+        $resultsContainer.slideUp().empty();
+        $loadingSpinner.show();
+
+        $.ajax({
+            url: "{% url 'diet_plan' %}", // This URL needs to be created
+            type: 'POST',
+            data: $form.serialize(),
+            success: function(data) {
+                $loadingSpinner.hide();
+                if (data.error) {
+                    $resultsContainer.html('<h3 class="text-danger">Error</h3><p>' + data.error + '</p>');
+                } else {
+                    let resultsHtml = '<h3>Your Personalized Diet Plan</h3>';
+                    resultsHtml += `<p>${data.summary.replace(/\\n/g, '<br>')}</p>`;
+                    
+                    for (const [day, meals] of Object.entries(data.daily_plan)) {
+                        resultsHtml += `<h4>${day.charAt(0).toUpperCase() + day.slice(1)}</h4><ul>`;
+                        for (const [meal, description] of Object.entries(meals)) {
+                            resultsHtml += `<li><strong>${meal.charAt(0).toUpperCase() + meal.slice(1)}:</strong> ${description}</li>`;
+                        }
+                        resultsHtml += '</ul>';
+                    }
+                    // Add the "Add to Calendar" button
+                    resultsHtml += `<div style="text-align: center; margin-top: 2rem;">
+                                      <a href="{% url 'generate_calendar' %}" class="btn-submit">Add to Calendar (Next 2 Weeks)</a>
+                                    </div>`;
+                    $resultsContainer.html(resultsHtml);
+                }
+                $resultsContainer.slideDown();
+            },
+            error: function(xhr) {
+                $loadingSpinner.hide();
+                $resultsContainer.html('<h3 class="text-danger">An Error Occurred</h3><p>Could not generate the diet plan. Please try again later.</p>').slideDown();
+                console.error('Error:', xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

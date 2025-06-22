@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ocr_app_pr1.views import upload_and_scan_image
+from ocr_app_pr1.views import upload_and_scan_image, diet_plan, generate_calendar
 from ocr_app_pr1.views import *
 
 
@@ -26,5 +26,7 @@ urlpatterns = [
     path('About',About, name='About'),
     path('Contact', Contact, name = 'Contact'),
     path('', Home, name= 'Home'),
-    path('Ingredient', Ingredient, name = 'Ingredient')
+    path('Ingredient', Ingredient, name = 'Ingredient'),
+    path('diet_plan', diet_plan, name='diet_plan'),
+    path('generate-calendar', generate_calendar, name='generate_calendar')
 ]
