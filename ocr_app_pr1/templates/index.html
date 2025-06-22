@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriScan : Upload and Scan</title>
+    {% comment %} <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}"> {% endcomment %}
+    <link rel="icon" type="image/jpg" href="{% static 'sunscreeningredients3-2_grande.webp' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body, html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-image: url("{% static '403999-111122-ent-breakingbad-hmed.webp' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+            background-color: rgba(255, 255, 255, 0.6);
+            padding: 12px;
+            border-radius: 11px;
+        } 
+       
+        form {
+            margin: 10px 20px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #EB5A39;
+            color: white;
+            border: none;
+            border-radius: 8px; 
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            display: block;
+            padding: 09px;
+            background-color: #EB5A39;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        
+        .custom-file-upload:hover,
+        button:hover {
+            background-color: #45a049;
+            transform: scale(1.04);
+        }
+        .clickable-image {
+            width: 80px;
+            height: 80px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .clickable-image:hover {
+            transform: scale(1.1);
+        }
+
+        .ooga_booga{
+            border-radius: 8px;
+            margin-top: 15px;
+
+        }
+        .ooga_booga:hover,
+        button:hover{
+            background-color: #45a049;
+            transform: scale(1.06);
+        }
+
+    </style>
+</head>
+<body>
+
+{% include 'navbar.html' %}
+    
+    <div class="container">
+        <h1>NutriScan</h1>
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="file-upload" class="custom-file-upload">
+                Choose File
+            </label>
+            <input id="file-upload" type="file" name="file" required>
+            <button type="submit" class = "ooga_booga">Upload and Scan</button>
+        </form>
+        
+        <h3>Your product has these Harmful Ingredients:</h3>
+        <ul id="output"></ul>
+
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            $('#upload-form').on('submit', function(e){
+                e.preventDefault();
+
+                const formData = new FormData(this);
+
+                // Adding the CSRF token
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                $.ajax({
+                    url: "{% url 'upload_and_scan_image' %}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(data){
+                        $('#output').empty();
+                        if(data.matched_ingredients.length > 0){
+                            $.each(data.matched_ingredients, function(index, ingredient){
+                                $('#output').append('<li><strong>' + ingredient.name + ':</strong> ' + ingredient.description + '</li>');
+                            });
+                        } else {
+                            $('#output').append('Nothing Harmful Detected, enjoy your product :)');
+                        }
+                    },
+                    error: function(xhr, status, error){
+                        console.error('Error:', error);
+                    }
+                });
+            });
+
+            $('.clickable-image').on('click', function() {
+                $(this).fadeOut();
+            });
+        });
+    </script>
+</body>
+</html>

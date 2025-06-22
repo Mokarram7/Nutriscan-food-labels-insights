@@ -1,0 +1,5 @@
+pytesseract
+Django==5.1.2
+gunicorn
+whitenoise==6.7.0
+brotli==1.1.0
