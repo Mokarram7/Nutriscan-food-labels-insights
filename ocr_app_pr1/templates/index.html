@@ -5,83 +5,47 @@
 
 {% block styles %}
 <style>
+    /* Main Layout & Typography */
+    #scan-page-wrapper {
+        width: 100%;
+        max-width: 650px;
+        margin: 0 auto;
+        text-align: center;
+    }
     #main-title {
         color: hsl(var(--foreground));
         font-weight: 700;
         font-size: 2.5rem;
         margin-bottom: 0.5rem;
     }
-
     .animated-subtitle {
         color: hsl(var(--muted-foreground));
         height: 1.5rem;
         margin-bottom: 2rem;
         font-size: 1.1rem;
     }
-
     #typewriter::after {
         content: '|';
         animation: blink 1s step-end infinite;
         color: hsl(var(--primary));
         font-weight: 100;
     }
-
     @keyframes blink {
         from, to { color: transparent }
         50% { color: hsl(var(--primary)); }
     }
 
-    /* Loading text style */
-    #loading-text {
-        color: hsl(var(--muted-foreground));
-        margin-top: 1rem;
-        font-style: italic;
-    }
-
-    .mode-btn, .action-btn, .custom-file-upload {
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease, transform 0.1s ease;
-    }
-
-    .mode-btn:active, .action-btn:active, .custom-file-upload:active {
-        transform: scale(0.97);
-    }
-
-    /* White Shine effect for dark buttons */
-    .action-btn::before, .mode-btn:not(.active)::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.6s ease;
-    }
-
-    .action-btn:hover::before, .mode-btn:not(.active):hover::before {
-        left: 100%;
-    }
-
-    /* Black Shine effect for light buttons */
-    .custom-file-upload::before, .mode-btn.active::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(120deg, transparent, rgba(0, 0, 0, 0.15), transparent);
-        transition: left 0.6s ease;
+    /* Main Scan Container */
+    #scan-container {
+        background-color: hsl(var(--card) / 0.8);
+        padding: 2rem;
+        border-radius: var(--radius);
+        border: 1px solid hsl(var(--border));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
     }
     
-    .custom-file-upload:hover::before, .mode-btn.active:hover::before {
-        left: 100%;
-    }
-
-    /* --- Component Styles inspired by Shadcn/Tailwind --- */
-
     /* Input Mode Switcher */
     .input-mode-switcher {
         display: flex;
@@ -97,46 +61,69 @@
         border-radius: var(--radius);
         cursor: pointer;
         font-weight: 600;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
     }
-    .mode-btn:hover {
-        background-color: hsl(var(--accent));
-    }
+    .mode-btn:hover { background-color: hsl(var(--accent)); }
     .mode-btn.active {
         background-color: hsl(var(--primary));
         color: hsl(var(--primary-foreground));
         border-color: hsl(var(--primary));
     }
 
-    /* File Upload */
-    #upload-container {
-        padding: 2rem;
-        border: 1px dashed hsl(var(--border));
+    /* Scan Area */
+    .scan-area {
         border-radius: var(--radius);
+        overflow: hidden; /* Ensures video stream corners are rounded */
+    }
+
+    /* File Upload Container */
+    #upload-container {
+        border: 2px dashed hsl(var(--border));
+        border-radius: var(--radius);
+        padding: 2rem;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 1rem;
-    }
-    .custom-file-upload {
-        display: inline-flex;
-        align-items: center;
         justify-content: center;
-        padding: 0.75rem 1.5rem;
-        background-color: hsl(var(--primary));
-        color: hsl(var(--primary-foreground));
-        border-radius: var(--radius);
-        font-weight: 600;
-        cursor: pointer;
+        gap: 1rem;
+        transition: border-color 0.3s ease, background-color 0.3s ease;
+        position: relative; /* For preview overlay */
+        min-height: 250px;
     }
-    .custom-file-upload:hover {
-        background-color: hsl(var(--primary) / 0.9);
+    #upload-container.dragover {
+        border-color: hsl(var(--primary));
+        background-color: hsl(var(--accent));
     }
-    input[type="file"] { display: none; }
+    #upload-prompt { text-align: center; }
+    #upload-prompt .icon { font-size: 3rem; color: hsl(var(--primary)); margin-bottom: 1rem; }
+    #upload-prompt p { margin: 0; }
+    #upload-prompt .browse-link { color: hsl(var(--primary)); font-weight: 600; cursor: pointer; }
+    
+    #image-preview-container {
+        display: none; /* Hidden by default */
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 1rem;
+        box-sizing: border-box;
+    }
+    #image-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: calc(var(--radius) - 4px);
+    }
 
     /* Camera View */
     #camera-container { display: none; flex-direction: column; align-items: center; gap: 1rem; }
     #camera-stream, #snapshot { width: 100%; border-radius: var(--radius); }
-    
+
+    /* Action Buttons */
+    .action-btn-group { margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; }
     .action-btn {
         padding: 0.75rem 1.5rem;
         background-color: #16a34a; /* Green */
@@ -146,86 +133,93 @@
         cursor: pointer;
         font-size: 1rem;
         font-weight: 600;
+        position: relative;
+        overflow: hidden;
+        transition: background-color 0.2s ease;
     }
-    .action-btn:hover {
-        background-color: #15803d;
+    .action-btn:hover { background-color: #15803d; }
+    .btn-secondary {
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--secondary-foreground));
     }
+    .btn-secondary:hover { background-color: hsl(var(--accent)); }
+    
+    /* Shine Effects */
+    .action-btn::before, .mode-btn:not(.active)::before {
+        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    .action-btn:hover::before, .mode-btn:not(.active):hover::before { left: 100%; }
+    .mode-btn.active::before {
+        background: linear-gradient(120deg, transparent, rgba(0, 0, 0, 0.15), transparent);
+    }
+    .mode-btn.active:hover::before { left: 100%; }
 
-    /* Results */
-    #results-container { margin-top: 2rem; display: none; flex-direction: column; gap: 1rem; }
-    .result-card {
-        background-color: hsl(var(--card));
-        padding: 1.5rem;
-        border-radius: var(--radius);
-        text-align: left;
-        border: 1px solid hsl(var(--border));
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-    }
-    .result-card h4 {
-        margin-top: 0;
-        font-size: 1.25rem;
-        color: hsl(var(--card-foreground));
-        border-bottom: 1px solid hsl(var(--border));
-        padding-bottom: 0.75rem;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-    .result-card h5 { font-weight: 600; color: hsl(var(--muted-foreground)); margin-bottom: 0.5rem; }
-    .result-card ul { padding-left: 1rem; margin: 0; list-style-type: '- '; }
-    .result-card li { margin-bottom: 0.5rem; }
-    .score-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 1rem auto; font-size: 2.25rem; font-weight: 700; border: 8px solid; transition: border-color 0.5s ease; }
-    #health-score-summary { text-align: center; color: hsl(var(--muted-foreground)); margin-top: 0.5rem; }
+    /* Loading State */
     #loading-spinner { border: 5px solid hsl(var(--secondary)); border-top: 5px solid hsl(var(--primary)); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 2rem auto; }
+    #loading-text { color: hsl(var(--muted-foreground)); margin-top: 1rem; font-style: italic; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 </style>
 {% endblock %}
 
 {% block content %}
-<div id="input-section">
-    <h1 id="main-title" class="text-center">NutriScan AI</h1>
-    <p class="animated-subtitle text-center"><span id="typewriter"></span></p>
-    <form id="analysis-form" onsubmit="return false;">
-    {% csrf_token %}
-        <div id="input-selection">
-            <div class="input-mode-switcher">
-                <button type="button" class="mode-btn active" id="upload-mode-btn">Upload Image</button>
-                <button type="button" class="mode-btn" id="camera-mode-btn">Use Camera</button>
-            </div>
+<div id="scan-page-wrapper">
+    <div id="input-section">
+        <h1 id="main-title">NutriScan AI</h1>
+        <p class="animated-subtitle"><span id="typewriter"></span></p>
 
-            <div id="upload-container">
-                <label for="file-upload" class="custom-file-upload">Choose File</label>
-                <input id="file-upload" type="file" name="file" accept="image/*">
-                <div id="file-name" class="text-muted">No file chosen</div>
-                <button type="button" id="analyze-file-btn" class="action-btn">Analyze</button>
-            </div>
+        <form id="analysis-form" onsubmit="return false;">
+            {% csrf_token %}
+            <div id="scan-container">
+                <div class="input-mode-switcher">
+                    <button type="button" class="mode-btn active" id="upload-mode-btn">Upload Image</button>
+                    <button type="button" class="mode-btn" id="camera-mode-btn">Use Camera</button>
+                </div>
 
-            <div id="camera-container">
-                <video id="camera-stream" autoplay playsinline></video>
-                <img id="snapshot" style="display:none;">
-                <canvas id="canvas" style="display:none;"></canvas>
-                <button type="button" id="capture-btn" class="action-btn">Capture</button>
-                <button type="button" id="recapture-btn" class="mode-btn" style="display:none;">Retake</button>
+                <div class="scan-area">
+                    <div id="upload-container">
+                        <input id="file-upload" type="file" name="file" accept="image/*" style="display:none;">
+                        <div id="upload-prompt">
+                            <div class="icon">&#128229;</div>
+                            <p><strong>Drag & drop an image here</strong></p>
+                            <p style="color: hsl(var(--muted-foreground));">or <span class="browse-link">browse files</span></p>
+                        </div>
+                        <div id="image-preview-container">
+                            <img id="image-preview" src="#" alt="Image Preview">
+                        </div>
+                    </div>
+
+                    <div id="camera-container">
+                        <video id="camera-stream" autoplay playsinline></video>
+                        <img id="snapshot" style="display:none;">
+                        <canvas id="canvas" style="display:none;"></canvas>
+                    </div>
+                </div>
+
+                <div class="action-btn-group">
+                    <button type="button" id="analyze-btn" class="action-btn" style="display:none;">Analyze</button>
+                    <button type="button" id="remove-file-btn" class="action-btn btn-secondary" style="display:none;">Remove</button>
+                    <button type="button" id="capture-btn" class="action-btn" style="display:none;">Capture</button>
+                    <button type="button" id="recapture-btn" class="action-btn btn-secondary" style="display:none;">Retake</button>
+                </div>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
+
+    <div id="loading-spinner" style="display: none;"></div>
+    <p id="loading-text" style="display: none;"></p>
 </div>
-
-<div id="loading-spinner" style="display: none;"></div>
-<p id="loading-text" style="display: none;"></p>
-<div id="results-container"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 $(document).ready(function(){
-    // --- Typewriter Effect ---
+    // --- Typewriter & Loading Text (No Changes) ---
     const words = ["Scan any food label.", "Get instant AI analysis.", "Make healthier choices."];
-    let i = 0;
-    let j = 0;
-    let currentWord = "";
-    let isDeleting = false;
+    let i = 0, j = 0, currentWord = "", isDeleting = false;
     const typewriterElement = $('#typewriter');
-
     function type() {
         currentWord = words[i];
         if (isDeleting) {
@@ -234,50 +228,29 @@ $(document).ready(function(){
             if (j === 0) {
                 isDeleting = false;
                 i = (i + 1) % words.length;
-                setTimeout(type, 500);
-                return;
+                setTimeout(type, 500); return;
             }
         } else {
             typewriterElement.text(currentWord.substring(0, j + 1));
             j++;
             if (j === currentWord.length) {
                 isDeleting = true;
-                setTimeout(type, 2000);
-                return;
+                setTimeout(type, 2000); return;
             }
         }
-        const typeSpeed = isDeleting ? 50 : 150;
-        setTimeout(type, typeSpeed);
+        setTimeout(type, isDeleting ? 50 : 150);
     }
-    type(); // Start the animation
+    type();
 
-    // --- Loading Messages ---
-    const loadingMessages = [
-        "Parsing the ingredients... Our AI is working hard 🧠",
-        "Analyzing your food... Just a byte more 🍴💻",
-        "Feeding data to our AI chef... 🔬👨‍🍳",
-        "Mixing nutrition with intelligence... Stand by 🧪🤖",
-        "Crunching the calorie code... 🔓🔥",
-        "Give us a sec—good health takes time 😊",
-        "Brewing something healthy... ☕🍏",
-        "Your smart nutrition report is loading...",
-        "Crunching the numbers—and the carrots 🥕📈",
-        "Hacking your meal for insights... 🛠️🥗",
-        "Almost ready! Just peeling a few data layers 🍌📊",
-        "Scanning ingredients for nutritional content...",
-        "Calculating macros, micros, and more...",
-        "Performing intelligent dietary analysis...",
-        "Building your food profile with precision...",
-        "Compiling a nutrient breakdown... Please wait.",
-        "Uploading your meal...", "Identifying ingredients...", "Analyzing nutrients...", "Finalizing your food report..."
-    ];
+    const loadingMessages = ["Parsing the ingredients... Our AI is working hard 🧠", "Analyzing your food... Just a byte more 🍴💻", "Feeding data to our AI chef... 🔬👨‍🍳", "Mixing nutrition with intelligence... Stand by 🧪🤖", "Crunching the calorie code... 🔓🔥", "Give us a sec—good health takes time 😊", "Brewing something healthy... ☕🍏", "Your smart nutrition report is loading...", "Crunching the numbers—and the carrots 🥕📈", "Hacking your meal for insights... 🛠️🥗", "Almost ready! Just peeling a few data layers 🍌📊", "Scanning ingredients for nutritional content...", "Calculating macros, micros, and more...", "Performing intelligent dietary analysis...", "Building your food profile with precision...", "Compiling a nutrient breakdown... Please wait.", "Uploading your meal...", "Identifying ingredients...", "Analyzing nutrients...", "Finalizing your food report..."];
     let loadingInterval;
 
-    // --- Existing Page Logic ---
-    let currentMode = 'upload'; // 'upload' or 'camera'
+    // --- Redesigned Page Logic ---
+    let currentMode = 'upload';
+    let uploadedFile = null;
     let stream;
-    let capturedBlob = null;
 
+    // --- jQuery Selectors ---
     const $uploadContainer = $('#upload-container');
     const $cameraContainer = $('#camera-container');
     const $uploadModeBtn = $('#upload-mode-btn');
@@ -285,13 +258,15 @@ $(document).ready(function(){
     const $video = $('#camera-stream')[0];
     const $canvas = $('#canvas')[0];
     const $snapshot = $('#snapshot');
+    const $inputSection = $('#input-section');
+    const $loadingSpinner = $('#loading-spinner');
+    const $loadingText = $('#loading-text');
+
+    // Button Selectors
+    const $analyzeBtn = $('#analyze-btn');
+    const $removeFileBtn = $('#remove-file-btn');
     const $captureBtn = $('#capture-btn');
     const $recaptureBtn = $('#recapture-btn');
-    const $resultsContainer = $('#results-container');
-    const $loadingSpinner = $('#loading-spinner');
-    const $inputSection = $('#input-section');
-    const $analyzeFileBtn = $('#analyze-file-btn');
-    const $loadingText = $('#loading-text');
 
     // --- Mode Switching ---
     $uploadModeBtn.on('click', () => switchMode('upload'));
@@ -302,28 +277,89 @@ $(document).ready(function(){
         if (mode === 'upload') {
             $uploadModeBtn.addClass('active');
             $cameraModeBtn.removeClass('active');
-            $uploadContainer.css('display', 'flex');
+            $uploadContainer.show();
             $cameraContainer.hide();
             stopCamera();
+            updateButtonVisibility();
         } else {
             $cameraModeBtn.addClass('active');
             $uploadModeBtn.removeClass('active');
             $uploadContainer.hide();
             $cameraContainer.css('display', 'flex');
             startCamera();
+            updateButtonVisibility();
         }
-        resetCapture();
     }
+
+    function updateButtonVisibility() {
+        // Hide all buttons first
+        $analyzeBtn.hide();
+        $removeFileBtn.hide();
+        $captureBtn.hide();
+        $recaptureBtn.hide();
+
+        if (currentMode === 'upload') {
+            if (uploadedFile) {
+                $analyzeBtn.show();
+                $removeFileBtn.show();
+            }
+        } else { // Camera mode
+            if (uploadedFile) { // Photo has been captured
+                $analyzeBtn.show();
+                $recaptureBtn.show();
+            } else { // Live stream is active
+                $captureBtn.show();
+            }
+        }
+    }
+
+    // --- File Upload & Drag-Drop Logic ---
+    function handleFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            uploadedFile = file;
+            $('#upload-prompt').hide();
+            $('#image-preview').attr('src', URL.createObjectURL(file));
+            $('#image-preview-container').show();
+            updateButtonVisibility();
+        } else {
+            alert("Please select a valid image file.");
+        }
+    }
+
+    $('.browse-link').on('click', () => $('#file-upload').click());
+    $('#file-upload').on('change', function() { handleFile(this.files[0]); });
+    
+    $uploadContainer.on({
+        dragenter: e => { e.preventDefault(); e.stopPropagation(); $uploadContainer.addClass('dragover'); },
+        dragover: e => { e.preventDefault(); e.stopPropagation(); $uploadContainer.addClass('dragover'); },
+        dragleave: e => { e.preventDefault(); e.stopPropagation(); $uploadContainer.removeClass('dragover'); },
+        drop: e => {
+            e.preventDefault();
+            e.stopPropagation();
+            $uploadContainer.removeClass('dragover');
+            handleFile(e.originalEvent.dataTransfer.files[0]);
+        }
+    });
+
+    $removeFileBtn.on('click', () => {
+        uploadedFile = null;
+        $('#file-upload').val(''); // Clear the input
+        $('#image-preview-container').hide();
+        $('#image-preview').attr('src', '#');
+        $('#upload-prompt').show();
+        updateButtonVisibility();
+    });
 
     // --- Camera Logic ---
     async function startCamera() {
+        if (stream) stopCamera(); // Stop any existing stream
+        resetCaptureState();
         try {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Camera API not supported.");
-            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Camera API not supported.");
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             $video.srcObject = stream;
             $video.style.display = 'block';
+            $snapshot.hide();
         } catch (err) {
             console.error("Error accessing camera:", err);
             alert("Could not access camera. Please use a secure (HTTPS) connection and grant camera permission.");
@@ -333,62 +369,52 @@ $(document).ready(function(){
 
     function stopCamera() {
         if (stream) stream.getTracks().forEach(track => track.stop());
-        $video.srcObject = null;
+        stream = null;
     }
 
-    $captureBtn.on('click', function() {
-        if (capturedBlob) {
-            const formData = new FormData();
-            formData.append('file', capturedBlob, 'capture.jpg');
-            performAnalysis(formData);
-            return;
+    function resetCaptureState() {
+        uploadedFile = null;
+        $snapshot.hide().attr('src', '');
+        $analyzeBtn.text('Analyze');
+        $captureBtn.text('Capture');
+        if (currentMode === 'camera') {
+            $video.style.display = 'block';
         }
+    }
+
+    $captureBtn.on('click', () => {
         const context = $canvas.getContext('2d');
         $canvas.width = $video.videoWidth;
         $canvas.height = $video.videoHeight;
         context.drawImage($video, 0, 0, $canvas.width, $canvas.height);
         $canvas.toBlob(blob => {
-            capturedBlob = blob;
-            $snapshot.attr('src', URL.createObjectURL(blob)).show();
+            uploadedFile = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+            $snapshot.attr('src', URL.createObjectURL(uploadedFile)).show();
+            $video.style.display = 'none';
+            stopCamera();
+            updateButtonVisibility();
         }, 'image/jpeg');
-        $video.style.display = 'none';
-        stopCamera();
-        $(this).text('Analyze Captured Photo');
-        $recaptureBtn.show();
     });
 
-    $recaptureBtn.on('click', resetCapture);
-
-    function resetCapture() {
-        capturedBlob = null;
-        $snapshot.hide().attr('src', '');
-        $captureBtn.text('Capture');
-        $recaptureBtn.hide();
-        if (currentMode === 'camera') {
-            startCamera();
-            $video.style.display = 'block';
-        }
-    }
-    
-    $('#file-upload').on('change', function() {
-        const file = this.files[0];
-        $('#file-name').text(file ? file.name : 'No file chosen');
+    $recaptureBtn.on('click', () => {
+        resetCaptureState();
+        startCamera();
+        updateButtonVisibility();
     });
 
-    $analyzeFileBtn.on('click', function() {
-        const file = $('#file-upload')[0].files[0];
-        if (!file) {
-            alert("Please choose a file to upload.");
+    // --- Analysis Logic ---
+    $analyzeBtn.on('click', () => {
+        if (!uploadedFile) {
+            alert("No file or image to analyze.");
             return;
         }
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', uploadedFile);
         performAnalysis(formData);
     });
 
     function performAnalysis(formData) {
-        const csrfToken = $('#analysis-form [name=csrfmiddlewaretoken]').val();
-        formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('csrfmiddlewaretoken', $('#analysis-form [name=csrfmiddlewaretoken]').val());
         
         $inputSection.hide();
         $loadingSpinner.show();
@@ -398,81 +424,37 @@ $(document).ready(function(){
         let messageIndex = Math.floor(Math.random() * loadingMessages.length);
         $loadingText.text(loadingMessages[messageIndex]);
         loadingInterval = setInterval(() => {
-            messageIndex = Math.floor(Math.random() * loadingMessages.length);
+            messageIndex = (messageIndex + 1) % loadingMessages.length;
             $loadingText.text(loadingMessages[messageIndex]);
         }, 2500);
 
         $.ajax({
             url: "{% url 'upload_and_scan_image' %}",
-            type: 'POST', data: formData, processData: false, contentType: false,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
             success: data => {
                 clearInterval(loadingInterval);
                 if (data.status === 'success') {
                     window.location.href = data.redirect_url;
                 } else {
-                    // Handle potential errors returned in a success response
                     $loadingSpinner.hide();
                     $loadingText.hide();
-                    $resultsContainer.html('<div class="result-card"><h4>Analysis Failed</h4><p>' + (data.error || 'An unknown error occurred.') + '</p></div><button id="scan-another" class="action-btn">Try Again</button>').show();
+                    $inputSection.show();
+                    alert("Analysis Failed: " + (data.error || "An unknown error occurred."));
                 }
             },
             error: xhr => {
                 clearInterval(loadingInterval);
                 $loadingSpinner.hide();
                 $loadingText.hide();
-                $inputSection.show(); // Show the input section again on error
+                $inputSection.show();
                 alert("An unexpected error occurred during analysis. Please try again.");
                 console.error('Error:', xhr.responseText);
             }
         });
     }
-
-    function displayResults(data) {
-        let resultsHtml = `
-            <div class="result-card" id="health-score-card"><h4>Overall Health Score</h4><div class="score-circle"><span id="health-score-value"></span>/10</div><p id="health-score-summary"></p></div>
-            <div class="result-card" id="harmful-ingredients-db-card"><h4>Harmful Ingredients Detected</h4><ul id="harmful-ingredients-db-list"></ul></div>
-            <div class="result-card" id="gemini-analysis-card"><h4>NutriScan's Detailed Analysis</h4><div id="gemini-harmful-ingredients-section"><h5>Potentially Harmful Ingredients</h5><ul id="gemini-harmful-list"></ul></div><div id="gemini-health-concerns-section"><h5>Health Concerns</h5><ul id="gemini-concerns-list"></ul></div><div id="gemini-alternatives-section"><h5>Healthier Alternatives</h5><p id="gemini-alternatives-text"></p></div></div>
-            <button id="scan-another" class="action-btn">Scan Another Product</button>
-        `;
-        $resultsContainer.html(resultsHtml).show();
-
-        if (data.matched_ingredients && data.matched_ingredients.length > 0) {
-            $.each(data.matched_ingredients, (i, ing) => $('#harmful-ingredients-db-list').append(`<li><strong>${ing.name}:</strong> ${ing.description}</li>`));
-        } else {
-            $('#harmful-ingredients-db-card').hide();
-        }
-
-        if (data.gemini_analysis && !data.gemini_analysis.error) {
-            const an = data.gemini_analysis;
-            $('#health-score-value').text(an.health_score || 'N/A');
-            $('#health-score-summary').text(an.summary || '');
-            const score = an.health_score;
-            let color = '#ef4444'; // red
-            if (score >= 4 && score <= 6) color = '#f97316'; // orange
-            if (score >= 7) color = '#22c55e'; // green
-            $('.score-circle').css('border-color', color);
-
-            if (an.harmful_ingredients?.length) {
-                $.each(an.harmful_ingredients, (i, item) => $('#gemini-harmful-list').append(`<li><strong>${item.name}:</strong> ${item.reason}</li>`));
-            } else $('#gemini-harmful-ingredients-section').hide();
-
-            if (an.health_concerns?.length) {
-                $.each(an.health_concerns, (i, con) => $('#gemini-concerns-list').append(`<li>${con}</li>`));
-            } else $('#gemini-health-concerns-section').hide();
-
-            if (an.alternatives) $('#gemini-alternatives-text').text(an.alternatives);
-            else $('#gemini-alternatives-section').hide();
-        } else {
-            $('#health-score-card').hide();
-            $('#gemini-analysis-card').html('<h4>Gemini Analysis Failed</h4><p>Could not retrieve analysis.</p>');
-        }
-    }
-
-    $(document).on('click', '#scan-another', function() {
-        // This button now only exists on the results page, but we keep the logic
-        // in case it's needed elsewhere. A page reload is simpler.
-        window.location.href = "{% url 'upload_and_scan_image' %}";
-    });
 });
 </script>
 {% endblock %}
