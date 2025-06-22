@@ -1,3 +1,4 @@
+from .gemini import analyze_ingredients_with_gemini
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
@@ -49,15 +50,21 @@ def upload_and_scan_image(request):
                         'description': ingredient.description
                     })
 
-            return JsonResponse({'matched_ingredients': matched_ingredients})
+            # 🔥 Call Gemini to analyze full OCR text
+            gemini_analysis = analyze_ingredients_with_gemini(extracted_text)
+            
+            # Store results in session
+            request.session['analysis_results'] = {
+                'matched_ingredients': matched_ingredients,
+                'gemini_analysis': gemini_analysis,
+            }
+            request.session.save()
+
+            # Return a success response that JS will use to redirect
+            return JsonResponse({'status': 'success', 'redirect_url': '/Ingredient'})
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-
-        finally:
-            # Delete the file after processing
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
 
     return render(request, 'index.html')
 
@@ -68,4 +75,5 @@ def Contact(request):
 def Home(request):
     return render (request, 'Home.html')
 def Ingredient(request):
-    return render (request, 'Ingredient.html')
+    results = request.session.pop('analysis_results', None)
+    return render (request, 'Ingredient.html', {'results': results})

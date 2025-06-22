@@ -1,94 +1,119 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Scanned Ingredients</title>
-    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
 
-    <style>
-        .ingredients-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-        }
-        .ingredients-list {
-            width: 45%;
-            padding: 15px;
-            border-radius: 8px;
-            background-color: #f8f8f8;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .ingredients-list h3 {
-            color: #D94720;
-            text-align: center;
-        }
-        .ingredient-card {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #ffffff;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .ingredient-card h4 {
-            margin: 0 0 5px;
-            font-size: 1.2rem;
-        }
-        .ingredient-card p {
-            margin: 0;
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-    {% include "navbar.html" %}
-    {% comment %} {% extends "navbar.html" %} {% endcomment %}
-    <div class="container mt-5">
-        <h1 class="text-center">Scanned Ingredients</h1>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="product_image" class="form-label">Upload Product Image</label>
-                <input class="form-control" type="file" id="product_image" name="product_image">
-            </div>
-            <button type="submit" class="btn btn-primary">Scan</button>
-        </form>
+{% block title %}Analysis Results{% endblock %}
 
-        <div class="ingredients-container mt-4">
-            <!-- Useful Ingredients -->
-            <div class="ingredients-list">
-                <h3>Useful Ingredients</h3>
-                {% if useful_ingredients %}
-                    {% for ingredient in useful_ingredients %}
-                        <div class="ingredient-card">
-                            <h4>{{ ingredient.name }}</h4>
-                            <p>{{ ingredient.description }}</p>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p>No useful ingredients found.</p>
-                {% endif %}
-            </div>
+{% block styles %}
+<style>
+    .result-card {
+        background-color: hsl(var(--card));
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        text-align: left;
+        border: 1px solid hsl(var(--border));
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    .result-card h4 {
+        margin-top: 0;
+        font-size: 1.25rem;
+        color: hsl(var(--card-foreground));
+        border-bottom: 1px solid hsl(var(--border));
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    .result-card h5 { font-weight: 600; color: hsl(var(--muted-foreground)); margin-bottom: 0.5rem; }
+    .result-card ul { padding-left: 1rem; margin: 0; list-style-type: '- '; }
+    .result-card li { margin-bottom: 0.5rem; }
+    .score-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 1rem auto; font-size: 2.25rem; font-weight: 700; border: 8px solid; transition: border-color 0.5s ease; }
+    #health-score-summary { text-align: center; color: hsl(var(--muted-foreground)); margin-top: 0.5rem; }
+</style>
+{% endblock %}
 
-            <!-- Harmful Ingredients -->
-            <div class="ingredients-list">
-                <h3>Harmful Ingredients</h3>
-                {% if harmful_ingredients %}
-                    {% for ingredient in harmful_ingredients %}
-                        <div class="ingredient-card">
-                            <h4>{{ ingredient.name }}</h4>
-                            <p>{{ ingredient.effect }}</p>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p>No harmful ingredients found.</p>
-                {% endif %}
-            </div>
+{% block content %}
+<h1>Analysis Results</h1>
+
+{% if results %}
+    <!-- Health Score -->
+    <div class="result-card" id="health-score-card">
+        <h4>Overall Health Score</h4>
+        <div class="score-circle">
+            <span id="health-score-value">{{ results.gemini_analysis.health_score|default:"N/A" }}</span>/10
         </div>
+        <p id="health-score-summary">{{ results.gemini_analysis.summary|default:"No summary available." }}</p>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- Harmful Ingredients from DB -->
+    {% if results.matched_ingredients %}
+    <div class="result-card" id="harmful-ingredients-db-card">
+        <h4>Harmful Ingredients Detected (DB)</h4>
+        <ul>
+            {% for ingredient in results.matched_ingredients %}
+                <li><strong>{{ ingredient.name }}:</strong> {{ ingredient.description }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Gemini Analysis -->
+    <div class="result-card" id="gemini-analysis-card">
+        <h4>NutriScan's Detailed Analysis</h4>
+        
+        {% if results.gemini_analysis.harmful_ingredients %}
+        <div id="gemini-harmful-ingredients-section">
+            <h5>Potentially Harmful Ingredients</h5>
+            <ul>
+                {% for item in results.gemini_analysis.harmful_ingredients %}
+                    <li><strong>{{ item.name }}:</strong> {{ item.reason }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if results.gemini_analysis.health_concerns %}
+        <div id="gemini-health-concerns-section" class="mt-3">
+            <h5>Health Concerns</h5>
+            <ul>
+                {% for concern in results.gemini_analysis.health_concerns %}
+                    <li>{{ concern }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if results.gemini_analysis.alternatives %}
+        <div id="gemini-alternatives-section" class="mt-3">
+            <h5>Healthier Alternatives</h5>
+            <p>{{ results.gemini_analysis.alternatives }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{% url 'upload_and_scan_image' %}" class="action-btn">Scan Another Product</a>
+    </div>
+
+{% else %}
+    <div class="content-card text-center">
+        <h1>No Analysis to Display</h1>
+        <p>Go to the scan page to analyze a product first.</p>
+        <a href="{% url 'upload_and_scan_image' %}" class="action-btn mt-3">Start Scanning</a>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    // Set score circle color
+    const score = parseInt($('#health-score-value').text());
+    if (!isNaN(score)) {
+        let color = '#ef4444'; // red
+        if (score >= 4 && score <= 6) color = '#f97316'; // orange
+        if (score >= 7) color = '#22c55e'; // green
+        $('.score-circle').css('border-color', color);
+    }
+});
+</script>
+{% endblock %}
